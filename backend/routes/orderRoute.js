@@ -4,40 +4,55 @@ import {
   createOrder,
   getOrders,
   getOrderById,
+  getAllOrders,
+  getAdminOrderById,
   updateOrderStatus,
 } from "../controllers/orderController.js";
+
+import authUser from "../middleware/auth.js";
+import authAdmin from "../middleware/authAdmin.js";
 
 const orderRouter = express.Router();
 
 
-/* ================= CREATE ORDER ================= */
+/* ================= CUSTOMER ROUTES ================= */
 
 orderRouter.post(
   "/create",
+  authUser,
   createOrder
 );
 
-
-/* ================= GET ALL ORDERS ================= */
-
 orderRouter.get(
   "/list",
+  authUser,
   getOrders
 );
 
-
-/* ================= GET SINGLE ORDER ================= */
-
 orderRouter.get(
   "/single/:id",
+  authUser,
   getOrderById
 );
 
 
-/* ================= UPDATE ORDER STATUS ================= */
+/* ================= ADMIN ROUTES ================= */
+
+orderRouter.get(
+  "/admin/list",
+  authAdmin,
+  getAllOrders
+);
+
+orderRouter.get(
+  "/admin/single/:id",
+  authAdmin,
+  getAdminOrderById
+);
 
 orderRouter.put(
-  "/status/:id",
+  "/admin/status/:id",
+  authAdmin,
   updateOrderStatus
 );
 

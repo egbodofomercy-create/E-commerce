@@ -1,8 +1,9 @@
 import {
   FiHome,
   FiBox,
-  FiPlusSquare,
   FiShoppingBag,
+  FiUsers,
+  FiSettings,
   FiLogOut,
 } from "react-icons/fi";
 
@@ -12,220 +13,102 @@ const Sidebar = ({
   setToken,
   setCurrentPage,
   currentPage,
+  counts = {},
 }) => {
   const logout = () => {
     localStorage.removeItem("adminToken");
     setToken("");
   };
 
-  return (
-    <aside className="w-64 min-h-screen bg-white border-r border-slate-200 flex flex-col">
+  const navItems = [
+    { key: "dashboard", label: "Dashboard", icon: FiHome },
+    { key: "products", label: "Products", count: counts.products, icon: FiBox },
+    { key: "orders", label: "Orders", count: counts.orders, icon: FiShoppingBag },
+    { key: "customers", label: "Customers", count: counts.customers, icon: FiUsers },
+    { key: "settings", label: "Settings", icon: FiSettings },
+  ];
 
-      {/* Logo */}
-      <div className="h-28 px-8 flex items-center">
+  return (
+    <aside
+      className="
+        w-[230px]
+        min-h-screen
+        bg-white
+        border-r border-slate-200
+        flex flex-col
+        sticky top-0
+      "
+    >
+      <div className="px-6 pt-7 pb-8">
         <img
           src={logo}
           alt="Bluvory"
-          className="w-24 h-auto object-contain"
+          className="w-[82px] h-auto object-contain"
         />
       </div>
 
-      {/* Navigation */}
-      <nav className="px-6 pt-10">
+      <nav className="flex-1 px-3">
+        <div className="space-y-1.5">
+          {navItems.map(({ key, label, count, icon: Icon }) => {
+            const active = currentPage === key;
 
-        {/* Dashboard */}
-        <button
-          type="button"
-          onClick={() => setCurrentPage("dashboard")}
-          className={`
-            w-full
-            flex
-            items-center
-            gap-5
-            px-5
-            py-4
-            rounded-xl
-            text-left
-            transition-all
-            duration-200
-            ${
-              currentPage === "dashboard"
-                ? "bg-blue-100 text-blue-600 font-semibold"
-                : "text-slate-600 hover:bg-slate-50 hover:text-blue-500"
-            }
-          `}
-        >
-          <FiHome
-            size={21}
-            strokeWidth={
-              currentPage === "dashboard" ? 2.2 : 1.6
-            }
-            className="shrink-0"
-          />
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setCurrentPage(key)}
+                className={`
+                  w-full h-11 flex items-center gap-3 px-3 rounded-lg
+                  text-left transition-colors duration-150
+                  ${
+                    active
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }
+                `}
+              >
+                <Icon
+                  size={18}
+                  strokeWidth={active ? 2.1 : 1.7}
+                  className="shrink-0"
+                />
 
-          <span className="text-[15px]">
-            Dashboard
-          </span>
-        </button>
+                <span className={`text-[15px] ${active ? "font-semibold" : "font-medium"}`}>
+                  {label}
+                </span>
 
-        {/* 16px spacing */}
-        <div className="h-4" />
-
-        {/* Products */}
-        <button
-          type="button"
-          onClick={() => setCurrentPage("products")}
-          className={`
-            w-full
-            flex
-            items-center
-            gap-5
-            px-5
-            py-4
-            rounded-xl
-            text-left
-            transition-all
-            duration-200
-            ${
-              currentPage === "products"
-                ? "bg-blue-100 text-blue-600 font-semibold"
-                : "text-slate-600 hover:bg-slate-50 hover:text-blue-500"
-            }
-          `}
-        >
-          <FiBox
-            size={21}
-            strokeWidth={
-              currentPage === "products" ? 2.2 : 1.6
-            }
-            className="shrink-0"
-          />
-
-          <span className="text-[15px]">
-            Products
-          </span>
-        </button>
-
-        {/* 16px spacing */}
-        <div className="h-4" />
-
-        {/* Add Product */}
-        <button
-          type="button"
-          onClick={() => setCurrentPage("add-product")}
-          className={`
-            w-full
-            flex
-            items-center
-            gap-5
-            px-5
-            py-4
-            rounded-xl
-            text-left
-            transition-all
-            duration-200
-            ${
-              currentPage === "add-product"
-                ? "bg-blue-100 text-blue-600 font-semibold"
-                : "text-slate-600 hover:bg-slate-50 hover:text-blue-500"
-            }
-          `}
-        >
-          <FiPlusSquare
-            size={21}
-            strokeWidth={
-              currentPage === "add-product" ? 2.2 : 1.6
-            }
-            className="shrink-0"
-          />
-
-          <span className="text-[15px]">
-            Add Product
-          </span>
-        </button>
-
-        {/* 16px spacing */}
-        <div className="h-4" />
-
-        {/* Orders */}
-        <button
-          type="button"
-          onClick={() => setCurrentPage("orders")}
-          className={`
-            w-full
-            flex
-            items-center
-            gap-5
-            px-5
-            py-4
-            rounded-xl
-            text-left
-            transition-all
-            duration-200
-            ${
-              currentPage === "orders"
-                ? "bg-blue-100 text-blue-600 font-semibold"
-                : "text-slate-600 hover:bg-slate-50 hover:text-blue-500"
-            }
-          `}
-        >
-          <FiShoppingBag
-            size={21}
-            strokeWidth={
-              currentPage === "orders" ? 2.2 : 1.6
-            }
-            className="shrink-0"
-          />
-
-          <span className="text-[15px]">
-            Orders
-          </span>
-        </button>
-
+                {count !== undefined && count !== null && (
+                  <span
+                    className={`
+                      ml-auto min-w-[23px] h-[21px] px-1.5
+                      flex items-center justify-center rounded-full
+                      text-[10px] font-medium
+                      ${active ? "bg-blue-100 text-blue-600" : "bg-slate-100 text-slate-400"}
+                    `}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </nav>
 
-      {/* Logout */}
-     {/* Logout */}
-<div className="mt-auto px-6 pb-10">
-
-  {/* Divider */}
-  <div className="border-t border-slate-200" />
-
-  {/* Space between line and logout */}
- <div className="h-6" />
-
-  <button
-    type="button"
-    onClick={logout}
-    className="
-      w-full
-      flex
-      items-center
-      gap-5
-      px-5
-      py-4
-      rounded-xl
-      text-left
-      text-slate-500
-      hover:bg-slate-50
-      hover:text-blue-500
-      transition-all
-      duration-200
-    "
-  >
-    <FiLogOut
-      size={21}
-      strokeWidth={1.6}
-      className="shrink-0"
-    />
-
-    <span className="text-[15px]">
-      Logout
-    </span>
-  </button>
-
-</div>
-
+      <div className="px-3 pb-6 pt-5 border-t border-slate-100">
+        <button
+          type="button"
+          onClick={logout}
+          className="
+            w-full h-11 flex items-center gap-3 px-3 rounded-lg
+            text-left text-slate-500 hover:bg-slate-50 hover:text-slate-800
+            transition-colors duration-150
+          "
+        >
+          <FiLogOut size={18} strokeWidth={1.7} className="shrink-0" />
+          <span className="text-[15px] font-medium">Logout</span>
+        </button>
+      </div>
     </aside>
   );
 };

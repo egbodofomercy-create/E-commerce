@@ -50,9 +50,8 @@ productRouter.delete(
 
 productRouter.put(
   "/update/:id",
-  upload.single("image"),
+  upload.array("images", 5),
   updateProduct
 );
-
 
 export default productRouter;

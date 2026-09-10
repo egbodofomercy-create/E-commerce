@@ -5,13 +5,14 @@ import orderModel from "../models/orderModel.js";
 const createOrder = async (req, res) => {
   try {
     const {
-      userId,
       items,
       amount,
       address,
       paymentMethod,
       payment,
     } = req.body;
+
+    const userId = req.userId;
 
     if (!userId || !items || !amount || !address) {
       return res.json({
@@ -37,7 +38,6 @@ const createOrder = async (req, res) => {
       message: "Order created successfully",
       order,
     });
-
   } catch (error) {
     console.log(error);
 
@@ -49,9 +49,75 @@ const createOrder = async (req, res) => {
 };
 
 
-/* ================= GET ALL ORDERS ================= */
+/* ================= GET USER ORDERS ================= */
 
 const getOrders = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not Authorized. Login Again",
+      });
+    }
+
+    const orders = await orderModel
+      .find({ userId })
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      orders,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+/* ================= GET USER SINGLE ORDER ================= */
+
+const getOrderById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const order = await orderModel.findOne({
+      _id: id,
+      userId,
+    });
+
+    if (!order) {
+      return res.json({
+        success: false,
+        message: "Order not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      order,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+
+/* ================= ADMIN — GET ALL ORDERS ================= */
+
+const getAllOrders = async (req, res) => {
   try {
     const orders = await orderModel
       .find({})
@@ -61,7 +127,6 @@ const getOrders = async (req, res) => {
       success: true,
       orders,
     });
-
   } catch (error) {
     console.log(error);
 
@@ -73,9 +138,9 @@ const getOrders = async (req, res) => {
 };
 
 
-/* ================= GET SINGLE ORDER ================= */
+/* ================= ADMIN — GET SINGLE ORDER ================= */
 
-const getOrderById = async (req, res) => {
+const getAdminOrderById = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -92,7 +157,6 @@ const getOrderById = async (req, res) => {
       success: true,
       order,
     });
-
   } catch (error) {
     console.log(error);
 
@@ -104,21 +168,24 @@ const getOrderById = async (req, res) => {
 };
 
 
-/* ================= UPDATE ORDER STATUS ================= */
+/* ================= ADMIN — UPDATE ORDER STATUS ================= */
 
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
+    if (!status) {
+      return res.json({
+        success: false,
+        message: "Status is required",
+      });
+    }
+
     const order = await orderModel.findByIdAndUpdate(
       id,
-      {
-        status,
-      },
-      {
-        new: true,
-      }
+      { status },
+      { new: true }
     );
 
     if (!order) {
@@ -133,7 +200,6 @@ const updateOrderStatus = async (req, res) => {
       message: "Order status updated successfully",
       order,
     });
-
   } catch (error) {
     console.log(error);
 
@@ -149,5 +215,7 @@ export {
   createOrder,
   getOrders,
   getOrderById,
+  getAllOrders,
+  getAdminOrderById,
   updateOrderStatus,
 };

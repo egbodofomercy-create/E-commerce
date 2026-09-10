@@ -1,156 +1,257 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 import RelatedProducts from "../components/RelatedProducts";
 
 const Product = () => {
   const { productId } = useParams();
-  const { products, addToCart } = useContext(ShopContext);
-  const [productData, setProductData] = useState(false);
+
+  const {
+    products,
+    addToCart,
+    currency,
+  } = useContext(ShopContext);
+
   const [image, setImage] = useState("");
   const [color, setColor] = useState("");
 
+  // Find the current product directly from the products list.
+  const productData = useMemo(() => {
+    return products.find((item) => item._id === productId);
+  }, [products, productId]);
 
+  // Set the first product image when the product changes.
+  const selectedImage =
+    image && productData?.image?.includes(image)
+      ? image
+      : productData?.image?.[0] || "";
 
-  useEffect(() => {
-    const fetchProductData = async () => {
-      const product = products.find((item) => item._id === productId);
+  // Loading state
+  if (!products.length) {
+    return (
+      <div className="py-20 text-center text-gray-500">
+        Loading product...
+      </div>
+    );
+  }
 
-    
-      if (product) {
-  setProductData(product);
-  setImage(product.image[0]);
-  setColor("");
-  
-}
-    };
+  // Product not found
+  if (!productData) {
+    return (
+      <div className="py-20 text-center">
+        <h2 className="text-xl font-medium">
+          Product not found
+        </h2>
 
-    fetchProductData();
-  }, [productId, products]);
+        <p className="text-gray-500 mt-2">
+          This product may have been removed or is no longer available.
+        </p>
+      </div>
+    );
+  }
 
-  return productData ? (
-    <div className ='border-t-2 pt-10 transition-opacity ease-in duration-500 opacity-100'>
-       {/*  Product data  */}
+  const isOutOfStock = productData.stock <= 0;
 
+  return (
+    <div className="border-t pt-10 transition-opacity ease-in duration-500 opacity-100">
 
-      <div className='flex gap-12 sm:gap-12 flex-col sm:flex-row'>
-          {/* Product images */}
-        <div className='flex-1 flex flex-col-reverse gap-3 sm:flex-row'>
-          <div className='flex sm:flex-col overflow-x-auto sm:overflow-y-scroll justify-normal sm:w-[18.7%] w-full'>
+      {/* ================= PRODUCT SECTION ================= */}
+      <div className="flex gap-12 flex-col sm:flex-row">
 
-            {productData.image.map((img, index) => (
-              <img onClick={()=>setImage(img)} src={img} key={index} className='w-[24%] sm:w-full sm:mb-3 flex-shrink-0 cursor-pointer' />
+        {/* ================= PRODUCT IMAGES ================= */}
+        <div className="flex-1 flex flex-col-reverse gap-3 sm:flex-row">
+
+          {/* Thumbnails */}
+          <div className="flex sm:flex-col overflow-x-auto sm:overflow-y-auto justify-normal sm:w-[18.7%] w-full gap-2">
+
+            {productData.image?.map((img, index) => (
+              <img
+                key={index}
+                onClick={() => setImage(img)}
+                src={img}
+                alt={`${productData.name} ${index + 1}`}
+                className={`w-[24%] sm:w-full sm:mb-1 flex-shrink-0 cursor-pointer border ${
+                  selectedImage === img
+                    ? "border-black"
+                    : "border-transparent"
+                }`}
+              />
             ))}
 
+          </div>
 
-      </div>
-        <div className="w-full sm:w-[80%]">
+          {/* Main Image */}
+          <div className="w-full sm:w-[80%]">
+            <img
+              className="w-full h-auto"
+              src={selectedImage}
+              alt={productData.name}
+            />
+          </div>
 
-              <img className="w-full h-auto" src={image} alt={productData.name}/>
-              
-           </div>
         </div>
 
-       {/*  -------product info----------  */}
-{/* Product Info */}
-<div className="flex-1">
-  <h1 className="font-medium text-2xl mt-2">
-    {productData.name}
-  </h1>
+        {/* ================= PRODUCT INFO ================= */}
+        <div className="flex-1">
 
-  {/* Rating */}
-  <div className="flex items-center gap-1 mt-2">
-    <p>⭐⭐⭐⭐☆</p>
-    <p className="pl-2">(157)</p>
-  </div>
+          {/* Product Name */}
+          <h1 className="font-medium text-2xl mt-2">
+            {productData.name}
+          </h1>
 
-  {/* Price */}
-  <p className="mt-5 text-3xl font-medium">
-    ₦{productData.price}
-  </p>
+          {/* Rating */}
+          <div className="flex items-center gap-1 mt-2 text-sm">
+            <p>⭐⭐⭐⭐☆</p>
+            <p className="pl-2 text-gray-500">
+              (0 reviews)
+            </p>
+          </div>
 
-  {/* Description */}
-  <p className="mt-5 text-gray-500 md:w-4/5">
-    {productData.description}
-  </p>
+          {/* Price */}
+          <p className="mt-5 text-3xl font-medium">
+            {currency}
+            {Number(productData.price).toLocaleString()}
+          </p>
 
-  {/* Color */}
-  <div className="flex flex-col gap-4 my-8">
-    <p>Color</p>
+          {/* Description */}
+          <p className="mt-5 text-gray-500 md:w-4/5 leading-relaxed">
+            {productData.description}
+          </p>
 
-    <div className="flex gap-2">
-      {productData.color.map((item, index) => (
-        <button
-          key={index}
-          onClick={() => setColor(item)}
-          className={`border py-2 px-4 ${
-            color === item
-              ? "border-black bg-blue-200"
-              : "bg-gray-100"
-          }`}
-        >
-          {item}
-        </button>
-      ))}
+          {/* ================= STOCK ================= */}
+          <div className="mt-5">
+
+            {isOutOfStock ? (
+              <p className="text-red-600 text-sm font-medium">
+                Out of Stock
+              </p>
+            ) : productData.stock <= 5 ? (
+              <p className="text-orange-600 text-sm font-medium">
+                Only {productData.stock} left in stock
+              </p>
+            ) : (
+              <p className="text-green-600 text-sm font-medium">
+                In Stock
+              </p>
+            )}
+
+          </div>
+
+          {/* ================= COLOR ================= */}
+          {productData.color?.length > 0 && (
+            <div className="flex flex-col gap-4 my-8">
+
+              <p className="font-medium">
+                Select Color
+              </p>
+
+              <div className="flex gap-2 flex-wrap">
+
+                {productData.color.map((item, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setColor(item)}
+                    className={`border py-2 px-5 text-sm transition ${
+                      color === item
+                        ? "border-black bg-black text-white"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-black"
+                    }`}
+                  >
+                    {item}
+                  </button>
+                ))}
+
+              </div>
+
+              {!color && (
+                <p className="text-xs text-gray-400">
+                  Please select a color before adding to cart.
+                </p>
+              )}
+
+            </div>
+          )}
+
+          {/* ================= ADD TO CART ================= */}
+          <button
+            onClick={() => {
+              if (isOutOfStock) return;
+
+              if (productData.color?.length > 0 && !color) {
+                return;
+              }
+
+              addToCart(productData._id, color);
+            }}
+            disabled={isOutOfStock}
+            className={`px-8 py-3 text-sm transition ${
+              isOutOfStock
+                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                : "bg-black text-white hover:bg-gray-800 active:bg-gray-700"
+            }`}
+          >
+            {isOutOfStock ? "OUT OF STOCK" : "ADD TO CART"}
+          </button>
+
+          <hr className="mt-8 sm:w-4/5" />
+
+          {/* ================= PRODUCT DETAILS ================= */}
+          <div className="text-sm text-gray-500 mt-5 flex flex-col gap-1">
+            <p>100% Original product.</p>
+            <p>Secure packaging and delivery.</p>
+            <p>Easy return and exchange policy within 7 days.</p>
+          </div>
+
+          {/* ================= DESCRIPTION & REVIEWS ================= */}
+          <div className="mt-20">
+
+            <div className="flex">
+
+              <b className="border px-5 py-3 text-sm">
+                Description
+              </b>
+
+              <p className="border px-5 py-3 text-sm text-gray-500">
+                Reviews (0)
+              </p>
+
+            </div>
+
+            <div className="flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500 leading-relaxed">
+
+              <p>
+                Discover timeless elegance with our beautifully
+                crafted jewelry, designed to complement every
+                occasion. Made with high-quality materials and
+                attention to detail, each piece combines
+                durability, style, and sophistication.
+              </p>
+
+              <p>
+                Whether you're dressing up for a special event
+                or adding a touch of luxury to your everyday
+                look, our collection offers the perfect
+                accessory. Enjoy premium craftsmanship, secure
+                packaging, and a seamless shopping experience
+                with every purchase.
+              </p>
+
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      {/* ================= RELATED PRODUCTS ================= */}
+      <RelatedProducts
+        category={productData.category}
+        subCategory={productData.subCategory}
+        currentProductId={productData._id}
+      />
+
     </div>
-  </div>
-
-  {/* Add to Cart */}
-  <button
-  onClick={() => addToCart(productData._id, color)}
-  className="bg-black text-white px-8 py-3 text-sm active:bg-gray-700"
->
-  ADD TO CART
-</button>
-  <hr className="mt-8 sm:w-4/5" />
-
-  {/* Product Details */}
-  <div className="text-sm text-gray-500 mt-5 flex flex-col gap-1">
-    <p>100% Original product.</p>
-    <p>Cash on delivery is not available on this product.</p>
-    <p>Easy return and exchange policy within 7 days.</p>
-  </div>
-
-{/* Description & Reviews */}
-<div className="mt-20">
-  <div className="flex">
-    <b className="border px-5 py-3 text-sm">Description</b>
-    <p className="border px-5 py-3 text-sm">Reviews (157)</p>
-  </div>
-
-  <div className="flex flex-col gap-4 border px-6 py-6 text-sm text-gray-500">
-    <p>
-      Discover timeless elegance with our beautifully crafted jewelry,
-      designed to complement every occasion. Made with high-quality
-      materials and attention to detail, each piece combines durability,
-      style, and sophistication.
-    </p>
-
-    <p>
-      Whether you're dressing up for a special event or adding a touch of
-      luxury to your everyday look, our collection offers the perfect
-      accessory. Enjoy premium craftsmanship, secure packaging, and a
-      seamless shopping experience with every purchase.
-    </p>
-  </div>
-</div>
-
-{/* Close Product Info */}
-</div>
-
-{/* Close Product Section */}
-</div>
-
-{/* Related Products */}
-<RelatedProducts
-  category={productData.category}
-  subCategory={productData.subCategory}
-  currentProductId={productData._id}
-/>
-
-</div>
-) : (
-<div className="opacity-0"></div>
-);
+  );
 };
+
 export default Product;

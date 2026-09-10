@@ -1,11 +1,26 @@
-import React, { useState } from "react";
+
+import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CartTotal from "../components/CartTotal";
 import toast from "react-hot-toast";
 import { assets } from "../assets/assets";
+import { ShopContext } from "../context/ShopContext";
+import axiosConfig from "../api/axiosConfig";
 
 const PlaceOrder = () => {
   const navigate = useNavigate();
+
+  const {
+  products,
+  cartItems,
+  getCartAmount,
+  delivery_fee,
+  token,
+  clearCart,
+} = useContext(ShopContext);
+
+  const [method, setMethod] = useState("card");
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -17,8 +32,6 @@ const PlaceOrder = () => {
     phone: "",
   });
 
-  const [method, setMethod] = useState("card");
-
   const onChangeHandler = (e) => {
     const { name, value } = e.target;
 
@@ -28,8 +41,14 @@ const PlaceOrder = () => {
     }));
   };
 
-  const onSubmitHandler = (e) => {
+  const onSubmitHandler = async (e) => {
     e.preventDefault();
+
+    if (!token) {
+      toast.error("Please login before placing an order");
+      navigate("/login");
+      return;
+    }
 
     if (
       !formData.firstName ||
@@ -44,16 +63,112 @@ const PlaceOrder = () => {
       return;
     }
 
-    console.log(formData);
-    console.log(method);
+    if (Object.keys(cartItems).length === 0) {
+      toast.error("Your cart is empty");
+      navigate("/collection");
+      return;
+    }
 
+    setLoading(true);
+
+    try {
+      const orderItems = [];
+
+      for (const itemId in cartItems) {
+        const product = products.find(
+          (item) => item._id === itemId
+        );
+
+        if (!product) continue;
+
+        for (const color in cartItems[itemId]) {
+          const quantity = cartItems[itemId][color];
+
+          if (quantity > 0) {
+            orderItems.push({
+              productId: itemId,
+              name: product.name,
+              price: product.price,
+              image: product.image?.[0] || "",
+              color,
+              quantity,
+            });
+          }
+        }
+      }
+
+      if (orderItems.length === 0) {
+        toast.error("Your cart is empty");
+        return;
+      }
+
+      const subtotal = getCartAmount();
+      const totalAmount = subtotal + delivery_fee;
+
+      const address = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        street: formData.street,
+        city: formData.city,
+        state: formData.state,
+        phone: formData.phone,
+      };
+
+      const paymentMethod =
+        method === "card"
+          ? "Card"
+          : method === "transfer"
+          ? "Bank Transfer"
+          : "USSD";
+
+      const response = await axiosConfig.post(
+        "/api/order/create",
+        {
+          items: orderItems,
+          amount: totalAmount,
+          address,
+          paymentMethod,
+          payment: false,
+        }
+      );
+
+     if (response.data.success) {
+  const cartCleared = await clearCart();
+
+  if (cartCleared) {
+    toast.success("Order placed successfully!");
     navigate("/orders");
+  } else {
+    toast.success("Order placed successfully!");
+    toast.error("Order saved, but cart could not be cleared.");
+    navigate("/orders");
+  }
+} else {
+        toast.error(
+          response.data.message ||
+            "Could not place order"
+        );
+      }
+    } catch (error) {
+      console.log(error);
+
+      toast.error(
+        error.response?.data?.message ||
+          "Could not place order"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <form onSubmit={onSubmitHandler} className="border-t pt-14">
+    <form
+      onSubmit={onSubmitHandler}
+      className="border-t pt-14"
+    >
+      {/* HEADING */}
 
-      {/* Heading */}
       <div className="text-2xl mb-8">
         <h1 className="font-semibold text-blue-500">
           Delivery Information
@@ -62,7 +177,8 @@ const PlaceOrder = () => {
 
       <div className="flex flex-col sm:flex-row justify-between gap-8">
 
-        {/* Left Side */}
+        {/* LEFT SIDE */}
+
         <div className="flex flex-col gap-4 w-full sm:max-w-[480px]">
 
           <div className="flex gap-3">
@@ -73,6 +189,7 @@ const PlaceOrder = () => {
               placeholder="First Name"
               value={formData.firstName}
               onChange={onChangeHandler}
+              required
             />
 
             <input
@@ -82,6 +199,7 @@ const PlaceOrder = () => {
               placeholder="Last Name"
               value={formData.lastName}
               onChange={onChangeHandler}
+              required
             />
           </div>
 
@@ -92,6 +210,7 @@ const PlaceOrder = () => {
             placeholder="Email Address"
             value={formData.email}
             onChange={onChangeHandler}
+            required
           />
 
           <input
@@ -101,6 +220,7 @@ const PlaceOrder = () => {
             placeholder="Street Address"
             value={formData.street}
             onChange={onChangeHandler}
+            required
           />
 
           <div className="flex gap-3">
@@ -111,6 +231,7 @@ const PlaceOrder = () => {
               placeholder="City"
               value={formData.city}
               onChange={onChangeHandler}
+              required
             />
 
             <input
@@ -120,6 +241,7 @@ const PlaceOrder = () => {
               placeholder="State"
               value={formData.state}
               onChange={onChangeHandler}
+              required
             />
           </div>
 
@@ -130,14 +252,17 @@ const PlaceOrder = () => {
             placeholder="Phone Number"
             value={formData.phone}
             onChange={onChangeHandler}
+            required
           />
-
         </div>
 
-        {/* Right Side */}
+        {/* RIGHT SIDE */}
+
         <div className="w-full sm:w-[450px]">
 
           <CartTotal />
+
+          {/* PAYMENT */}
 
           <div className="mt-8">
 
@@ -146,6 +271,7 @@ const PlaceOrder = () => {
             </h2>
 
             {/* CARD */}
+
             <div
               onClick={() => setMethod("card")}
               className={`flex items-center justify-between border rounded-lg p-4 cursor-pointer transition ${
@@ -162,7 +288,7 @@ const PlaceOrder = () => {
                       ? "bg-blue-500 border-blue-500"
                       : "border-gray-400"
                   }`}
-                ></div>
+                />
 
                 <img
                   src={assets.card_icon}
@@ -173,18 +299,31 @@ const PlaceOrder = () => {
                 <p className="font-medium">
                   Pay with Card
                 </p>
-
               </div>
 
               <div className="flex gap-2">
-                <img src={assets.visa_icon} alt="" className="h-5" />
-                <img src={assets.mastercard_icon} alt="" className="h-5" />
-                <img src={assets.verve_icon} alt="" className="h-5" />
-              </div>
+                <img
+                  src={assets.visa_icon}
+                  alt=""
+                  className="h-5"
+                />
 
+                <img
+                  src={assets.mastercard_icon}
+                  alt=""
+                  className="h-5"
+                />
+
+                <img
+                  src={assets.verve_icon}
+                  alt=""
+                  className="h-5"
+                />
+              </div>
             </div>
 
             {/* BANK TRANSFER */}
+
             <div
               onClick={() => setMethod("transfer")}
               className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer mt-3 transition ${
@@ -199,7 +338,7 @@ const PlaceOrder = () => {
                     ? "bg-blue-500 border-blue-500"
                     : "border-gray-400"
                 }`}
-              ></div>
+              />
 
               <img
                 src={assets.bank_icon}
@@ -210,10 +349,10 @@ const PlaceOrder = () => {
               <p className="font-medium">
                 Bank Transfer
               </p>
-
             </div>
 
             {/* USSD */}
+
             <div
               onClick={() => setMethod("ussd")}
               className={`flex items-center gap-3 border rounded-lg p-4 cursor-pointer mt-3 transition ${
@@ -228,7 +367,7 @@ const PlaceOrder = () => {
                     ? "bg-blue-500 border-blue-500"
                     : "border-gray-400"
                 }`}
-              ></div>
+              />
 
               <img
                 src={assets.ussd_icon}
@@ -239,22 +378,24 @@ const PlaceOrder = () => {
               <p className="font-medium">
                 USSD
               </p>
-
             </div>
-
           </div>
+
+          {/* PLACE ORDER */}
 
           <button
             type="submit"
-            className="w-full mt-6 bg-blue-500 text-white py-3 rounded-lg hover:bg-blue-600 transition"
+            disabled={loading}
+            className={`w-full mt-6 text-white py-3 rounded-lg transition ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600"
+            }`}
           >
-            Place Order
+            {loading ? "Placing Order..." : "Place Order"}
           </button>
-
         </div>
-
       </div>
-
     </form>
   );
 };

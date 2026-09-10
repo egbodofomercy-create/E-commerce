@@ -4,9 +4,13 @@ import axios from "axios";
 const Login = ({ setToken }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const onSubmitHandler = async (event) => {
     event.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
       const response = await axios.post(
@@ -18,14 +22,19 @@ const Login = ({ setToken }) => {
       );
 
       if (response.data.success) {
-  setToken(response.data.token);
-  localStorage.setItem("adminToken", response.data.token);
-} else {
-        alert(response.data.message);
+        setToken(response.data.token);
+        localStorage.setItem("adminToken", response.data.token);
+      } else {
+        setError(response.data.message || "Invalid admin credentials");
       }
     } catch (error) {
       console.log(error);
-      alert("Something went wrong");
+      setError(
+        error.response?.data?.message ||
+          "Could not reach the server. Is your backend running?"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,11 +65,20 @@ const Login = ({ setToken }) => {
         required
       />
 
+      {error && (
+        <p className="text-red-600 text-sm -mt-2">{error}</p>
+      )}
+
       <button
         type="submit"
-        className="bg-blue-500 text-white py-3 rounded"
+        disabled={loading}
+        className={`text-white py-3 rounded transition ${
+          loading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-blue-500 hover:bg-blue-600"
+        }`}
       >
-        Login
+        {loading ? "Logging in..." : "Login"}
       </button>
     </form>
   );

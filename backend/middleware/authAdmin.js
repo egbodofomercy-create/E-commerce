@@ -1,13 +1,13 @@
 import jwt from "jsonwebtoken";
 
-const authUser = async (req, res, next) => {
+const authAdmin = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         success: false,
-        message: "Not Authorized. Login Again",
+        message: "Not Authorized",
       });
     }
 
@@ -18,7 +18,12 @@ const authUser = async (req, res, next) => {
       process.env.JWT_SECRET
     );
 
-    req.userId = token_decode.id;
+    if (token_decode.email !== process.env.ADMIN_EMAIL) {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access required",
+      });
+    }
 
     next();
   } catch (error) {
@@ -26,9 +31,9 @@ const authUser = async (req, res, next) => {
 
     return res.status(401).json({
       success: false,
-      message: "Invalid or expired token. Login Again",
+      message: "Invalid or expired admin token",
     });
   }
 };
 
-export default authUser;
+export default authAdmin;

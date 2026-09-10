@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useMemo } from 'react'
 import { ShopContext } from '../context/ShopContext'
 import Title from './Title'
 import ProductItem from './ProductItem';
@@ -6,19 +6,14 @@ import ProductItem from './ProductItem';
 const BestSeller = () => {
 
     const {products} = useContext(ShopContext);
-    const [bestSeller,setBestSeller] = useState([])
-
-
-    useEffect(()=>{
-        const bestproduct = products.filter ((item)=>(item.bestseller));
-        setBestSeller(bestproduct.slice(0,5))
-
-
-    },[]) 
+    const bestSeller = useMemo(
+      () => products.filter((item) => item.bestseller).slice(0, 5),
+      [products]
+    )
   return (
     <div className='my-10'>
      <div className='text-center text-3xl py-8'>
-       <Title text1={'BEST'} text2={'SELLERS'}/>
+     <Title text1={'BEST'} text2={'SELLERS'} black />
              <p className='w-3/4 m-auto text-xs sm:text-sm md:text-base text-blue-600'>
              Dressing well is a form of good manners
        </p>

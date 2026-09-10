@@ -1,12 +1,29 @@
 import userModel from "../models/userModel.js";
 
+/* ================= ADD TO CART ================= */
+
 const addToCart = async (req, res) => {
   try {
-    const { userId, itemId, color } = req.body;
+    const userId = req.userId;
+    const { itemId, color } = req.body;
+
+    if (!userId || !itemId || !color) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing cart information",
+      });
+    }
 
     const userData = await userModel.findById(userId);
 
-    let cartData = userData.cartData;
+    if (!userData) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const cartData = userData.cartData || {};
 
     if (!cartData[itemId]) {
       cartData[itemId] = {};
@@ -18,7 +35,9 @@ const addToCart = async (req, res) => {
       cartData[itemId][color] = 1;
     }
 
-    await userModel.findByIdAndUpdate(userId, { cartData });
+    await userModel.findByIdAndUpdate(userId, {
+      cartData,
+    });
 
     res.json({
       success: true,
@@ -33,15 +52,33 @@ const addToCart = async (req, res) => {
     });
   }
 };
+
+/* ================= REMOVE FROM CART ================= */
+
 const removeFromCart = async (req, res) => {
   try {
-    const { userId, itemId, color } = req.body;
+    const userId = req.userId;
+    const { itemId, color } = req.body;
+
+    if (!userId || !itemId || !color) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing cart information",
+      });
+    }
 
     const userData = await userModel.findById(userId);
 
-    let cartData = userData.cartData;
+    if (!userData) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
 
-    if (cartData[itemId] && cartData[itemId][color]) {
+    const cartData = userData.cartData || {};
+
+    if (cartData[itemId]?.[color]) {
       if (cartData[itemId][color] > 1) {
         cartData[itemId][color] -= 1;
       } else {
@@ -53,7 +90,9 @@ const removeFromCart = async (req, res) => {
       }
     }
 
-    await userModel.findByIdAndUpdate(userId, { cartData });
+    await userModel.findByIdAndUpdate(userId, {
+      cartData,
+    });
 
     res.json({
       success: true,
@@ -69,13 +108,29 @@ const removeFromCart = async (req, res) => {
   }
 };
 
+/* ================= GET USER CART ================= */
+
 const getUserCart = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not Authorized. Login Again",
+      });
+    }
 
     const userData = await userModel.findById(userId);
 
-    const cartData = userData.cartData;
+    if (!userData) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    const cartData = userData.cartData || {};
 
     res.json({
       success: true,
@@ -91,4 +146,49 @@ const getUserCart = async (req, res) => {
   }
 };
 
-export { addToCart, removeFromCart, getUserCart };
+/* ================= CLEAR CART ================= */
+
+const clearCart = async (req, res) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Not Authorized. Login Again",
+      });
+    }
+
+    const userData = await userModel.findById(userId);
+
+    if (!userData) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await userModel.findByIdAndUpdate(userId, {
+      cartData: {},
+    });
+
+    res.json({
+      success: true,
+      message: "Cart cleared successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export {
+  addToCart,
+  removeFromCart,
+  getUserCart,
+  clearCart,
+};

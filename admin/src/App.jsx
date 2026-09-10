@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import axios from "axios";
 import Login from "./pages/Login";
 import Sidebar from "./components/Sidebar";
 import Navbar from "./components/Navbar";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
-import AddProduct from "./pages/AddProduct";
-import EditProduct from "./pages/EditProduct";
 import Orders from "./pages/Orders";
+import Customers from "./pages/Customers";
 
 const App = () => {
   const [token, setToken] = useState(
@@ -14,8 +14,43 @@ const App = () => {
   );
 
   const [currentPage, setCurrentPage] = useState("dashboard");
-  const [selectedProductId, setSelectedProductId] = useState("");
-const [selectedOrderId, setSelectedOrderId] = useState("");
+  const [counts, setCounts] = useState({ products: null, orders: null, customers: null });
+
+  const pageTitles = {
+    dashboard: ["Dashboard", "Welcome back, Admin 👋"],
+    products: ["Products", "Manage your product catalog"],
+    orders: ["Orders", "Track and manage customer orders"],
+    customers: ["Customers", "View and manage your customers"],
+  };
+
+  const refreshCounts = useCallback(async () => {
+    if (!token) return;
+    try {
+      const [productsRes, ordersRes, usersRes] = await Promise.all([
+        axios.get("http://localhost:4000/api/product/list"),
+        axios.get("http://localhost:4000/api/order/admin/list", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+        axios.get("http://localhost:4000/api/user/count", {
+          headers: { Authorization: `Bearer ${token}` },
+        }),
+      ]);
+
+      setCounts({
+        products: productsRes.data.success ? productsRes.data.products.length : null,
+        orders: ordersRes.data.success ? ordersRes.data.orders.length : null,
+        customers: usersRes.data.success ? usersRes.data.count : null,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(refreshCounts, 0);
+    return () => clearTimeout(timeoutId);
+  }, [refreshCounts]);
+
   return (
     <>
       {!token ? (
@@ -23,52 +58,37 @@ const [selectedOrderId, setSelectedOrderId] = useState("");
       ) : (
         <div className="min-h-screen bg-slate-50 flex">
 
-          {/* Sidebar */}
           <Sidebar
             setToken={setToken}
             setCurrentPage={setCurrentPage}
             currentPage={currentPage}
+            counts={counts}
           />
 
-          {/* Main Area */}
           <div className="flex-1 min-w-0">
 
-       {/* Navbar - Dashboard only */}
-{currentPage === "dashboard" && (
-  <Navbar setToken={setToken} />
-)}
-            {/* Page Content */}
+            <Navbar
+              setToken={setToken}
+              title={pageTitles[currentPage]?.[0] || ""}
+              subtitle={pageTitles[currentPage]?.[1] || ""}
+            />
+
             <main className="p-6 sm:p-8 lg:p-10">
               {currentPage === "dashboard" && (
                 <Dashboard setCurrentPage={setCurrentPage} />
               )}
 
               {currentPage === "products" && (
-                <Products
-  setCurrentPage={setCurrentPage}
-  setSelectedProductId={setSelectedProductId}
-  currentPage={currentPage}
-/>
+                <Products currentPage={currentPage} onDataChanged={refreshCounts} />
               )}
 
-              {currentPage === "add-product" && (
-                <AddProduct setCurrentPage={setCurrentPage} />
+              {currentPage === "orders" && (
+                <Orders onDataChanged={refreshCounts} />
               )}
 
-              {currentPage === "edit-product" && (
-  <EditProduct
-    setCurrentPage={setCurrentPage}
-    selectedProductId={selectedProductId}
-  />
-)}
-
-{currentPage === "orders" && (
-  <Orders
-    setCurrentPage={setCurrentPage}
-    selectedOrderId={selectedOrderId}
-    setSelectedOrderId={setSelectedOrderId}
-  />
-)}
+              {currentPage === "customers" && (
+                <Customers currentPage={currentPage} />
+              )}
             </main>
 
           </div>

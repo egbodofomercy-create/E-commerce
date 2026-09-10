@@ -161,8 +161,6 @@ const getProductById = async (req, res) => {
 
 
 
-// ================= UPDATE PRODUCT =================
-
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -176,7 +174,34 @@ const updateProduct = async (req, res) => {
       subCategory,
       color,
       bestseller,
+      existingImages,
     } = req.body;
+
+    let parsedColors = [];
+
+    try {
+      parsedColors = JSON.parse(color);
+    } catch (error) {
+      return res.json({
+        success: false,
+        message: "Invalid color format",
+      });
+    }
+
+    let remainingImages = [];
+
+    if (existingImages) {
+      try {
+        remainingImages = JSON.parse(existingImages);
+      } catch (error) {
+        return res.json({
+          success: false,
+          message: "Invalid existing images format",
+        });
+      }
+    }
+
+    /* ================= UPDATE DATA ================= */
 
     const updateData = {
       name,
@@ -185,32 +210,49 @@ const updateProduct = async (req, res) => {
       stock: Number(stock),
       category,
       subCategory,
-      color: JSON.parse(color),
+      color: parsedColors,
       bestseller: bestseller === "true",
     };
 
-    // ================= NEW IMAGES =================
+    /* ================= NEW IMAGES ================= */
 
-    const imageFiles = req.files;
+    const imageFiles = req.files || [];
 
-    if (imageFiles && imageFiles.length > 0) {
-      const imageUrls = [];
+    const newImageUrls = [];
 
+    if (imageFiles.length > 0) {
       for (const imageFile of imageFiles) {
-        const imageUpload = await cloudinary.uploader.upload(
-          imageFile.path,
-          {
-            resource_type: "image",
-          }
+        const imageUpload =
+          await cloudinary.uploader.upload(
+            imageFile.path,
+            {
+              resource_type: "image",
+            }
+          );
+
+        newImageUrls.push(
+          imageUpload.secure_url
         );
-
-        imageUrls.push(imageUpload.secure_url);
       }
-
-      updateData.image = imageUrls;
     }
 
-    // ================= UPDATE PRODUCT =================
+    /* ================= COMBINE IMAGES ================= */
+
+    const finalImages = [
+      ...remainingImages,
+      ...newImageUrls,
+    ];
+
+    if (finalImages.length > 5) {
+      return res.json({
+        success: false,
+        message: "A product can have a maximum of 5 images",
+      });
+    }
+
+    updateData.image = finalImages;
+
+    /* ================= UPDATE PRODUCT ================= */
 
     const updatedProduct =
       await productModel.findByIdAndUpdate(
@@ -244,18 +286,15 @@ const updateProduct = async (req, res) => {
     });
   }
 };
-
-
 // ================= DELETE PRODUCT =================
 
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedProduct =
-      await productModel.findByIdAndDelete(id);
+    const product = await productModel.findByIdAndDelete(id);
 
-    if (!deletedProduct) {
+    if (!product) {
       return res.json({
         success: false,
         message: "Product not found",

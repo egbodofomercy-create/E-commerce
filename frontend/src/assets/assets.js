@@ -30,6 +30,7 @@ import visa_icon from './visa_icon.jpeg';
 import ussd_icon from './ussd_icon.png';
 import bank_icon from './bank_icon.jpeg';
 import card_icon from './card_icon.png';
+import about from './about.JPG' ;
 
 export const assets = {
   
@@ -60,7 +61,8 @@ export const assets = {
   visa_icon,
   ussd_icon,
   bank_icon,
-  card_icon
+  card_icon,
+  about,
 };
 
 
